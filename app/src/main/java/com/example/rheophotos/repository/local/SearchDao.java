@@ -17,11 +17,11 @@ public abstract class SearchDao {
     @Query("SELECT * FROM  search_results WHERE search_key = (:searchKey) AND search_offset = (:offset)")
     public abstract List<SearchTable> getResult(String searchKey, int offset);
 
+    //This is done so that before inserting we don't have to query the database again to get its size
     @Query("SELECT COUNT (id) FROM search_results")
     public abstract int getTotalRows();
 
-    //This is done so that before inserting we don't have to query the database again to get its size
-    //DB can have max SearchTable.MAX_ROWS otherwise cache size of app will keep on increasing
+    //DB can have max SearchTable.MAX_ROWS otherwise cache size of app will keep on increasing with new search results
     //After reaching the threshold size of MAX_ROWS we will delete the oldest record in DB and then insert new record
     @Query("DELETE FROM search_results WHERE last_access_time = (SELECT MIN(last_access_time) FROM search_results)")
     public abstract void deleteOldestRecord();

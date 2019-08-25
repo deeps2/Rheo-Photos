@@ -22,7 +22,7 @@ import retrofit2.Response;
 
 //Repository class
 //This will fetch the data either from API or locally
-public class SearchRepository {
+public class SearchRepository implements Callback<SearchResponse> {
     private int offset = 0;
     private int totalEstimatedMatches = 1;
     private boolean requestRunning = false;
@@ -70,9 +70,11 @@ public class SearchRepository {
 
             List<SearchTable> searchTableList = RheoRoomDBHelper.getInstance().searchDao().getResult(searchQueryString.toLowerCase(), offset);
             if (searchTableList == null || searchTableList.isEmpty()) {
-                ExecutorUtils.getInstance().mainThread().execute(this::makeRequest);
+                //no result found in table, fetch from API
+                ExecutorUtils.getInstance().mainThread().execute(this::makeAPIRequest);
 
             } else {
+                //result found in table
                 //only 1 response will be present in DB for a particular searchQueryString and offset
                 SearchResponse searchResponse = (SearchResponse) AppUtils.getObject(searchTableList.get(0).searchResult, SearchResponse.class);
                 if (searchResponse == null) {
@@ -80,8 +82,10 @@ public class SearchRepository {
                     return;
                 }
 
+                //update last access time
                 RheoRoomDBHelper.getInstance().searchDao().updateLastAccessTime(System.currentTimeMillis(), searchTableList.get(0).id);
 
+                //pass the result set to main thread
                 ExecutorUtils.getInstance().mainThread().execute(() -> {
                     requestRunning = false;
                     onValidResultsReceived(searchResponse);
@@ -90,47 +94,42 @@ public class SearchRepository {
         });
     }
 
-    private void makeRequest() {
+    private void makeAPIRequest() {
         call = getWebService().searchList(searchQueryString, offset);
-
         searchRepoInterface.onRequestStarted();
+        call.enqueue(this);
+    }
 
-        call.enqueue(new Callback<SearchResponse>() {
-            @Override
-            public void onResponse(@NonNull Call<SearchResponse> call, @NonNull Response<SearchResponse> response) {
-                requestRunning = false;
-                searchRepoInterface.onRequestFinished();
+    @Override
+    public void onResponse(@NonNull Call<SearchResponse> call, @NonNull Response<SearchResponse> response) {
+        onNetworkRequestFinished();
 
-                if (!response.isSuccessful()) {
-                    searchRepoInterface.onResponseUnsuccessful(offset);
-                    return;
-                }
+        if (!response.isSuccessful()) {
+            searchRepoInterface.onResponseUnsuccessful(offset);
+            return;
+        }
 
-                SearchResponse searchResponse = response.body();
-                if (isResponseEmpty(searchResponse)) {
-                    notifyPresenterNoResponse();
-                    return;
-                }
+        SearchResponse searchResponse = response.body();
+        if (isResponseEmpty(searchResponse)) {
+            notifyPresenterNoResponse();
+            return;
+        }
 
-                int currentOffset = offset;
-                onValidResultsReceived(searchResponse);
-                makeChangesInDatabase(currentOffset, searchResponse);
-            }
+        int currentOffset = offset;
+        onValidResultsReceived(searchResponse);
+        makeChangesInDatabase(currentOffset, searchResponse);
+    }
 
-            @Override
-            public void onFailure(@NonNull Call<SearchResponse> call, @NonNull Throwable t) {
-                requestRunning = false;
-                searchRepoInterface.onRequestFinished();
-
-                if (call.isCanceled()) {
-                    //do nothing as call might be canceled because activity no longer exist
-                } else if (t instanceof IOException && Constants.ERROR_NO_NET.equals(t.getMessage())) {
-                    searchRepoInterface.onNetworkErrorOccurred(offset);
-                } else {
-                    searchRepoInterface.onNonNetworkErrorOccurred(offset);
-                }
-            }
-        });
+    @Override
+    public void onFailure(@NonNull Call call, @NonNull Throwable t) {
+        onNetworkRequestFinished();
+        if (call.isCanceled()) {
+            //do nothing as call might be canceled because activity is destroyed
+        } else if (t instanceof IOException && Constants.ERROR_NO_NET.equals(t.getMessage())) {
+            searchRepoInterface.onNetworkErrorOccurred(offset);
+        } else {
+            searchRepoInterface.onNonNetworkErrorOccurred(offset);
+        }
     }
 
     private boolean isResponseEmpty(SearchResponse searchResponse) {
@@ -142,12 +141,18 @@ public class SearchRepository {
             searchRepoInterface.onNoResultsFoundInVeryFirstCall();
     }
 
+    private void onNetworkRequestFinished() {
+        requestRunning = false;
+        searchRepoInterface.onRequestFinished();
+    }
+
     private void onValidResultsReceived(SearchResponse searchResponse) {
         offset = searchResponse.getNextOffset();
         totalEstimatedMatches = searchResponse.getTotalEstimatedMatches();
         searchRepoInterface.onValidResultsReceived(searchResponse.getResultsList());
     }
 
+    //insert new record in DB and delete oldest record if MAX_ROWS size is reached
     private void makeChangesInDatabase(int currentOffset, SearchResponse searchResponse) {
         ExecutorUtils.getInstance().diskIO().execute(() -> {
             SearchTable searchTable = SearchTable.getObject(searchQueryString.toLowerCase(),

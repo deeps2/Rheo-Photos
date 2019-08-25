@@ -33,12 +33,11 @@ public class SearchLocal {
 
     //get total rows from SearchTable.
     //This is done so that before inserting we don't have to query the database again to get its size
-    //DB can have max SearchTable.MAX_ROWS otherwise cache size of app will keep on increasing
+    //DB can have max SearchTable.MAX_ROWS otherwise cache size of app will keep on increasing with new search results
     //After reaching the threshold size of MAX_ROWS we will delete the oldest record in DB and then insert new record
     public void getTotalRowsFromDB() {
-        SearchDao searchDao = RheoRoomDBHelper.getInstance().searchDao();
         ExecutorUtils.getInstance().diskIO().execute(() -> {
-            int count = searchDao.getTotalRows();
+            int count = RheoRoomDBHelper.getInstance().searchDao().getTotalRows();
             totalRows.set(count);
         });
     }
