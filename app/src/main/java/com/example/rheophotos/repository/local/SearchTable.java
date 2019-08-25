@@ -24,7 +24,7 @@ public class SearchTable {
     public long lastAccessTime;
 
     @Ignore
-    public static final int MAX_ROWS = 10; //todo -- warning change this
+    public static final int MAX_ROWS = 100;
 
     public static SearchTable getObject(String searchKey, int offset, String searchResult, long lastAccessTime) {
         SearchTable searchTable = new SearchTable();
