@@ -5,8 +5,8 @@ APK: https://drive.google.com/open?id=1c3wR2GeHDkFVRcP-95Nj_hbmJummhtOx
 # ScreenShots
 
 <img src="https://res.cloudinary.com/deeps2/image/upload/v1566728961/rheo_photos/search_results.jpg" width=280>&nbsp;&nbsp;
-<img src="https://res.cloudinary.com/deeps2/image/upload/v1566728959/rheo_photos/pagination_request_ongoing_with_placeholder.jpg" width=280/>&nbsp;&nbsp;
-<img src="https://res.cloudinary.com/deeps2/image/upload/v1566728957/rheo_photos/no_net.png" width=280/></br></br></br></br>
+<img src="https://res.cloudinary.com/deeps2/image/upload/v1566728959/rheo_photos/pagination_request_ongoing_with_placeholder.jpg" width=280/></br></br></br></br>
+<img src="https://res.cloudinary.com/deeps2/image/upload/v1566728957/rheo_photos/no_net.png" width=280/>
 <img src="https://res.cloudinary.com/deeps2/image/upload/v1566728958/rheo_photos/no_results.png" width=280/>&nbsp;&nbsp; 
 <img src="https://res.cloudinary.com/deeps2/image/upload/v1566728957/rheo_photos/generic_error.png" width=280/>&nbsp;&nbsp;
 
